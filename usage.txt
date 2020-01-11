@@ -1,0 +1,55 @@
+Commands:
+
+!brewlette spin
+	Spins the brewlette wheel using the default method. The default method can be changed using !brewlette set-default <params>.
+	
+!brewlette [spin|vote] [[role|all|online|active|custom] [custom-users]]
+	spin
+		Spins the brewlette wheel, selecting a winner at random.
+	vote
+		Initiates a vote as to who will be the winner.
+		Reactions of "A" to "Z" will be shown with a legend list allowing members to click the appropriate reaction to register their vote.
+		Once the timer expires, the member with the most votes will be deemed the winner.
+		In the event of a tie, the winner is picked randomly from those with the most votes.
+		Note that if more than 26 members are eligible, 26 will be picked at random.
+	method
+		Sets the method used to determine which members are eligible. Defaults to the last used method if omitted.
+		- role
+			All members of the given role are eligible, whether online or offline.
+		- all
+			Sets all members of the server as eligible.
+		- online
+			Similar to the all option, but only members whose status is currently online (including those who are idle or do not disturb) are eligible.
+		- active
+			Similar to the online option, but excludes those who are idle or do not disturb.
+		- custom
+			Uses a custom list of names. 
+			- custom-users
+				Specifies the names of those eligible via a comma-seperated string. Names with spaces should be quoted. These don't need to be discord member names.
+
+!brewlette channel [channel]
+	Sets the channel in which brewlette messages appear. If omitted or invalid, messages will appear in the channel from which they were initiated.
+	
+
+Usage examples:
+
+!brewlette spin
+	Spins the brewlette wheel using the last used method. If no previous method exists, the default will be online-members.
+!brewlette spin role brewer
+	Spins the brewlette wheel for all members with the "brewer" role.
+!brewlette spin all
+	Spins the brewlette wheel for all members of the server.
+!brewlette vote online
+	Begins a vote for all online, idle or do not disturb members.
+!brewlette vote active
+	Begins a vote for all online (not idle or do not disturb) members.
+!brewlette spin custom Stephen,Billy,Jamie,Simon
+	Spins the brewlette wheel for the names Stephen, Billy, Jamie and Simon.
+!brewlette vote custom "Stephen Waugh","Billy Budd",Jamie,Simon,"Philip Rawle"
+	Initialites a vote for the names Stephen Waugh, Billy Budd, Jamie, Simon and Philip Rawle.
+
+!brewlette channel tea-room
+	Directs messages to the "#tea-room" channel.
+
+!brewlette prefix %
+	Changes the brewlette prefix to % (e.g. members can then use "% spin" instead of "!brewlette spin").

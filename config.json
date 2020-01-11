@@ -1,0 +1,17 @@
+{
+  "keepAlive": {
+    "url": "http://brewlette-discord-bot.herokuapp.com/",
+    "port": 3000
+  },
+  "database": {
+    "name": "brewlette",
+    "username": "brewlette-user",
+    "password": "brewlette-password",
+    "options": {
+      "host": "localhost",
+      "dialect": "sqlite",
+      "logging": false,
+      "storage": "database.sqlite"
+    }
+  }
+}

@@ -1,0 +1,9 @@
+install node.js + npm (default options)
+
+Command line/powershell:
+
+npm install --save discord.js
+
+run with:
+
+node bot.js
