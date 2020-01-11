@@ -57,9 +57,9 @@ setInterval(() =>
 // Initialise Discord Bot.
 var discord = new Discord.Client();
 
-discord.once('ready', () =>
+discord.on('ready', () =>
 {
-    logger.info('Connected');
+    logger.info(`Logged in as ${discord.user.tag}!`);
 
     sqlSettings.sync();
     logger.info('Settings synchronised.');
@@ -78,7 +78,6 @@ discord.on('message', async message =>
     }
 
     // Read the settings for the guild.
-    logger.debug('Guild.', { guild: message.guild });
     var settings = await LoadGuildSettings(message.guild.id);
     if (!settings)
     {
@@ -132,6 +131,12 @@ discord.on('message', async message =>
             {
                 logger.verbose('Prefix command received.', { args: args });
                 SetPrefix(message, settings, args);
+            }
+            break;
+        case 'test':
+            {
+                logger.verbose('Test command received.', { args: args });
+                Test(message, settings, args);
             }
             break;
         default:
@@ -230,9 +235,109 @@ async function SaveGuildSettings(settings)
     }
 }
 
+function Test(message, settings, args)
+{
+    logger.debug('Testing', { args: args });
+    var method = args.shift() || '';
+
+    switch (method.toLowerCase())
+    {
+        case 'role':
+            {
+                // TODO: remaining args should be a role name.
+                var roleName = args.shift();
+            }
+            break;
+        case 'all':
+            {
+                // Restrict to a random selection of 26 members.
+                logger.verbose('Getting guild member list.');
+                message.guild.fetchMembers().then(guild =>
+                {
+                    logger.debug('Loaded guild members.', { allMembers: guild.members, memberCount: guild.memberCount });
+
+                    // TEMP: This shouldn't be needed, but I can't seem to get members at the moment, and this at least stops an error.
+                    guild.members = guild.members || new Discord.Collection();
+
+                    var nonBotMembers = guild.members.filter(m => !m.user.bot);
+                    logger.debug('All members', { nonBotMembers: nonBotMembers });
+
+                    nonBotMembers.sort(() => 0.5 - Math.random())
+                    nonBotMembers = nonBotMembers.slice(0, 25);
+                    logger.debug('Eligible members', { nonBotMembers: nonBotMembers });
+
+                    var selected = nonBotMembers[0];
+
+                    if (selected)
+                    {
+                        message.channel.send(`<@${selected.id}> (${selected.name}) was selected from a pool of ${nonBotMembers.length}`);
+                    }
+                    else
+                    {
+                        message.channel.send(`No-one is eligible!`);
+                    }
+                });
+            }
+            break;
+        case 'online':
+            {
+            }
+            break;
+        case 'active':
+            {
+            }
+            break;
+        case 'custom':
+            {
+            }
+            break;
+    }
+}
+
 function Spin(message, settings, args)
 {
-    var brewletteMessage = message.channel.send('TODO: Spin.');
+    var voteUsers = ['Simon', 'Billy', 'Jamie', 'Andy'];
+
+    var attachment = new Discord.Attachment('./images/roulette.gif', 'roulette.gif');
+    var embed = new Discord.RichEmbed()
+        .setTitle("Round and round it goes, who makes the tea, nobody knows...")
+        .setDescription(`Who will be the lucky winner who gets the honours?`)
+        .attachFile(attachment)
+        .setImage('attachment://roulette.gif')
+        .setFooter(`Find out in a moment...`);
+
+    var brewletteMessage = undefined;
+
+    logger.verbose('Sending spin message.');
+    message.channel.send({ embed: embed })
+        .then(newMessage =>
+        {
+            logger.verbose('Spin message sent.');
+            brewletteMessage = newMessage;
+
+            setTimeout(() =>
+            {
+                logger.verbose('Spin delay elapsed, editing message.');
+
+                brewletteMessage.attachments.deleteAll();
+
+                var newAttachment = new Discord.Attachment('./images/teabag.gif', 'teabag.gif');
+                var newEmbed = new Discord.RichEmbed()
+                    .setTitle("We have a winner!")
+                    .setDescription(`**${voteUsers[3]}** has been selected to make a round of teas.`)
+                    .attachFile(newAttachment)
+                    .setImage('attachment://teabag.gif');
+
+                // TODO: if possible, mention the winner (not possible for the custom method).
+
+                brewletteMessage.delete()
+                    .then(() =>
+                    {
+                        message.channel.send({ embed: newEmbed });
+                        logger.verbose('Original message deleted and new message sent.');
+                    })
+            }, 10000);
+        });
 }
 
 function Vote(message, settings, args)
