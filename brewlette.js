@@ -235,108 +235,223 @@ async function SaveGuildSettings(settings)
     }
 }
 
+function GetMembers(message, method, param)
+{
+    const _FilterAll = function (member)
+    {
+        return !member.user.bot;
+    }
+    const _FilterOnline = function (member)
+    {
+        return !member.user.bot && member.user.presence.status !== 'offline';
+    }
+    const _FilterActive = function (member)
+    {
+        return !member.user.bot && member.user.presence.status === 'online';
+    }
+    const _FilterRole = function (member, roleName)
+    {
+        return !member.user.bot && member.roles.some(role => role.name.toLowerCase() === roleName.toLowerCase());
+    }
+
+    const _GetMembers = function (members, filterFunction, filterParam)
+    {
+        var filteredMembers = members.filter(member => filterFunction(member, filterParam));
+        var randomMembers = filteredMembers.random(26).filter(item => item !== undefined);
+        console.log(randomMembers);
+
+        var selectedIndex = parseInt(Math.random() * randomMembers.length);
+        var selected = randomMembers[selectedIndex];
+
+        return {
+            selected: selected,
+            eligible: randomMembers,
+            poolSize: filteredMembers.array().length,
+            isCustom: false,
+        }
+    }
+
+    const _GetCustomUsers = function (args)
+    {
+        // TODO: implement.
+
+        // TODO: Combine the args into a single string again.
+        // TODO: Split the string based on commas.
+        // TODO: Trim the resulting array items.
+        // TODO: Convert the array into a results object.
+
+        var memberNames = args.join(' ');
+        var members = memberNames.split(',').map(item => item.trim());
+
+        // TODO: Implement choosing 26 random if the size of the pool is greater than 26.
+
+        //var filteredMembers = new Discord.Collection(members);
+        //var randomMembers = filteredMembers.random(26).filter(item => item !== undefined);
+        var randomMembers = members;
+
+        var selectedIndex = parseInt(Math.random() * randomMembers.length);
+        var selected = randomMembers[selectedIndex];
+
+        return {
+            selected: selected,
+            eligible: randomMembers,
+            poolSize: randomMembers.length, //filteredMembers.array().length,
+            isCustom: true,
+        }
+    }
+
+    var results = undefined;
+
+    console.log('starting promise');
+
+    return new Promise((resolve, reject) =>
+    {
+        console.log('processing');
+        switch (method.toLowerCase())
+        {
+            case 'role':
+                {
+                    var roleName = args.shift();
+
+                    logger.verbose('Getting role-based guild member list.');
+
+                    message.guild.members.fetch()
+                        .then(m =>
+                        {
+                            console.log('resolving');
+                            resolve(_GetMembers(m, _FilterRole, roleName));
+                        })
+                        .catch(logger.error);
+                }
+                break;
+            case 'all':
+                {
+                    logger.verbose('Getting all guild member list.');
+
+                    message.guild.members.fetch()
+                        .then(m =>
+                        {
+                            console.log('resolving');
+                            resolve(_GetMembers(m, _FilterAll))
+                        })
+                        .catch(logger.error);
+                }
+                break;
+            case 'online':
+                {
+                    logger.verbose('Getting online guild member list.');
+
+                    message.guild.members.fetch()
+                        .then(m =>
+                        {
+                            console.log('resolving');
+                            resolve(_GetMembers(m, _FilterOnline))
+                        })
+                        .catch(logger.error);
+                }
+                break;
+            case 'active':
+                {
+                    logger.verbose('Getting active guild member list.');
+
+                    message.guild.members.fetch()
+                        .then(m =>
+                        {
+                            console.log('resolving');
+                            resolve(_GetMembers(m, _FilterActive))
+                        })
+                        .catch(logger.error);
+                }
+                break;
+            case 'custom':
+                {
+                    logger.verbose('Getting custom user list.');
+                    resolve(_GetCustomUsers(param));
+                }
+                break;
+        }
+    });
+}
+
 function Test(message, settings, args)
 {
     logger.debug('Testing', { args: args });
     var method = args.shift() || '';
-
-    switch (method.toLowerCase())
-    {
-        case 'role':
+    GetMembers(message, method, args)
+        .then(results =>
+        {
+            console.log('handling results');
+            if (results.selected)
             {
-                // TODO: remaining args should be a role name.
-                var roleName = args.shift();
+                message.channel.send(`<@${results.selected.id}> (${results.selected.displayName}) was selected from a pool of ${results.poolSize}`);
             }
-            break;
-        case 'all':
+            else
             {
-                // Restrict to a random selection of 26 members.
-                logger.verbose('Getting guild member list.');
-                message.guild.fetchMembers().then(guild =>
-                {
-                    logger.debug('Loaded guild members.', { allMembers: guild.members, memberCount: guild.memberCount });
-
-                    // TEMP: This shouldn't be needed, but I can't seem to get members at the moment, and this at least stops an error.
-                    guild.members = guild.members || new Discord.Collection();
-
-                    var nonBotMembers = guild.members.filter(m => !m.user.bot);
-                    logger.debug('All members', { nonBotMembers: nonBotMembers });
-
-                    nonBotMembers.sort(() => 0.5 - Math.random())
-                    nonBotMembers = nonBotMembers.slice(0, 25);
-                    logger.debug('Eligible members', { nonBotMembers: nonBotMembers });
-
-                    var selected = nonBotMembers[0];
-
-                    if (selected)
-                    {
-                        message.channel.send(`<@${selected.id}> (${selected.name}) was selected from a pool of ${nonBotMembers.length}`);
-                    }
-                    else
-                    {
-                        message.channel.send(`No-one is eligible!`);
-                    }
-                });
+                message.channel.send(`No-one is eligible!`);
             }
-            break;
-        case 'online':
-            {
-            }
-            break;
-        case 'active':
-            {
-            }
-            break;
-        case 'custom':
-            {
-            }
-            break;
-    }
+        }).catch(console.log);
 }
 
 function Spin(message, settings, args)
 {
-    var voteUsers = ['Simon', 'Billy', 'Jamie', 'Andy'];
-
-    var attachment = new Discord.Attachment('./images/roulette.gif', 'roulette.gif');
-    var embed = new Discord.RichEmbed()
-        .setTitle("Round and round it goes, who makes the tea, nobody knows...")
-        .setDescription(`Who will be the lucky winner who gets the honours?`)
-        .attachFile(attachment)
-        .setImage('attachment://roulette.gif')
-        .setFooter(`Find out in a moment...`);
-
-    var brewletteMessage = undefined;
-
-    logger.verbose('Sending spin message.');
-    message.channel.send({ embed: embed })
-        .then(newMessage =>
+    var method = args.shift() || settings.lastMethod || 'active';
+    GetMembers(message, method, args)
+        .then(results =>
         {
-            logger.verbose('Spin message sent.');
-            brewletteMessage = newMessage;
+            console.log(results);
 
-            setTimeout(() =>
-            {
-                logger.verbose('Spin delay elapsed, editing message.');
+            var attachment = new Discord.MessageAttachment('./images/roulette.gif', 'roulette.gif');
+            var embed = new Discord.MessageEmbed()
+                .setTitle("Round and round it goes, who makes the tea, nobody knows...")
+                .setDescription(`Who will be the lucky winner who gets the honours?`)
+                .attachFiles(attachment)
+                .setImage('attachment://roulette.gif')
+                .setFooter(`Find out in a moment...`);
 
-                brewletteMessage.attachments.deleteAll();
+            var brewletteMessage = undefined;
 
-                var newAttachment = new Discord.Attachment('./images/teabag.gif', 'teabag.gif');
-                var newEmbed = new Discord.RichEmbed()
-                    .setTitle("We have a winner!")
-                    .setDescription(`**${voteUsers[3]}** has been selected to make a round of teas.`)
-                    .attachFile(newAttachment)
-                    .setImage('attachment://teabag.gif');
+            logger.verbose('Sending spin message.');
+            message.channel.send({ embed: embed })
+                .then(newMessage =>
+                {
+                    logger.verbose('Spin message sent.');
+                    brewletteMessage = newMessage;
 
-                // TODO: if possible, mention the winner (not possible for the custom method).
-
-                brewletteMessage.delete()
-                    .then(() =>
+                    setTimeout(() =>
                     {
-                        message.channel.send({ embed: newEmbed });
-                        logger.verbose('Original message deleted and new message sent.');
-                    })
-            }, 10000);
+                        logger.verbose('Spin delay elapsed, editing message.');
+
+                        brewletteMessage.attachments.clear();
+
+                        const _GetWinningUser = function(results)
+                        {
+                            if (results.isCustom)
+                            {
+                                return results.selected || results.selected.displayName || results.selected.user.username;
+                            }
+                            else
+                            {
+                                return results.selected;
+                            }
+                        }
+
+                        var newAttachment = new Discord.MessageAttachment('./images/teabag.gif', 'teabag.gif');
+                        var newEmbed = new Discord.MessageEmbed()
+                            .setTitle("We have a winner!")
+                            .setDescription(`**${_GetWinningUser(results)}** has been selected to make the drinks.`)
+                            .attachFiles(newAttachment)
+                            .setImage('attachment://teabag.gif');
+
+                        // TODO: if possible, mention the winner (not possible for the custom method).
+
+                        brewletteMessage.delete()
+                            .then(() =>
+                            {
+                                message.channel.send({ embed: newEmbed });
+                                logger.verbose('Original message deleted and new message sent.');
+                            })
+                    }, 10000);
+                });
         });
 }
 
@@ -345,7 +460,7 @@ function Vote(message, settings, args)
     // TODO: Remaining emojis.
     const emojiList = ['🇦', '🇧', '🇨', '🇩', '🇪', '🇫', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''];
     // TODO: Properly dynamic users list.
-    var voteUsers = ['Simon', 'Billy', 'Jamie', 'Andy'];
+    var voteUsers = ['Simon', 'Billy', 'Jamie', 'Stephen'];
     var voteResults = [];
 
     function _AddReactions(brewletteMessage)
@@ -443,7 +558,7 @@ function SetChannel(message, settings, args)
         if (channelName)
         {
             // Verify the channel.
-            var channel = message.guild.channels.find('name', channelName)
+            var channel = message.guild.channels.find(channel => channel.channelName === channelName);
             settings.channelName = channelName;
             SaveGuildSettings(settings);
             if (channel)
@@ -458,7 +573,7 @@ function SetChannel(message, settings, args)
         else
         {
             // Verify the channel.
-            var channel = message.guild.channels.find('name', settings.channelName);
+            var channel = message.guild.channels.find(channel => channel.channelName === channelName);
             if (channel)
             {
                 message.channel.send(`Brewlette is sending spin/vote messages to the channel <#${channel.id}>`);

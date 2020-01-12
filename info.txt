@@ -7,3 +7,9 @@ npm install --save discord.js
 run with:
 
 node bot.js
+
+Add bot to server with:
+
+https://discordapp.com/api/oauth2/authorize?client_id=664559419454914601&permissions=30720&scope=bot
+
+https://discordapp.com/api/oauth2/authorize?client_id=664559419454914601&permissions=8&scope=bot
